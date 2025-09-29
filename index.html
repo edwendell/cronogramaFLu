@@ -94,6 +94,20 @@
             <p class="mt-2 text-lg" style="color: var(--text-color); opacity: 0.8;">Acompanhe seu progresso no Cronograma dos Fluentes.</p>
         </header>
 
+        <!-- Progresso Geral -->
+        <div class="neumorphic-out p-6 mb-8">
+            <h2 class="text-xl font-semibold text-center mb-4" style="color: var(--text-color);">Progresso Geral do Cronograma</h2>
+            <div class="w-full">
+                <div class="flex justify-between mb-1">
+                    <span class="text-base font-medium" style="color: var(--accent-color);">Total</span>
+                    <span id="overall-progress-text" class="text-sm font-medium" style="color: var(--accent-color);">0%</span>
+                </div>
+                <div class="w-full h-4 progress-track">
+                    <div id="overall-progress-bar" class="h-4 progress-fill transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Seletor de Semana e Barra de Progresso -->
         <div class="neumorphic-out p-6 mb-8 sticky top-4 z-10">
             <h2 class="text-xl font-semibold text-center mb-6" style="color: var(--text-color);">
@@ -224,6 +238,8 @@
             if (savedWeek) {
                 currentWeek = parseInt(savedWeek, 10);
             }
+            updateOverallProgress();
+            calculateAndUpdateRealCurrentWeek();
         }
 
         // Salva o progresso
@@ -251,7 +267,6 @@
             if (!weekData) return;
 
             plannerContent.innerHTML = '';
-            currentWeekDisplay.textContent = weekNumber;
             
             weekData.days.forEach(day => {
                 const dayCard = document.createElement('div');
@@ -310,6 +325,42 @@
             progressText.textContent = `${percentage}% completo`;
         }
         
+        // --- NOVAS FUNÇÕES ---
+
+        // Calcula e atualiza a semana atual com base no progresso real
+        function calculateAndUpdateRealCurrentWeek() {
+            let maxWeek = 0;
+            for (const taskId in completionStatus) {
+                if (completionStatus[taskId]) {
+                    const weekNum = parseInt(taskId.split('-')[0].substring(1));
+                    if (weekNum > maxWeek) {
+                        maxWeek = weekNum;
+                    }
+                }
+            }
+            const displayWeek = maxWeek > 0 ? maxWeek : 1;
+            currentWeekDisplay.textContent = displayWeek;
+        }
+
+        // Atualiza a barra de progresso geral
+        function updateOverallProgress() {
+            const totalTasks = plannerData.reduce((acc, week) => {
+                return acc + week.days.reduce((dayAcc, day) => dayAcc + day.tasks.length, 0);
+            }, 0);
+
+            const completedTasks = Object.values(completionStatus).filter(status => status).length;
+            const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            
+            const overallProgressBar = document.getElementById('overall-progress-bar');
+            const overallProgressText = document.getElementById('overall-progress-text');
+
+            if (overallProgressBar && overallProgressText) {
+                overallProgressBar.style.width = `${percentage}%`;
+                overallProgressText.textContent = `${percentage}% completo`;
+            }
+        }
+
+
         // Event Listeners
         weekSelector.addEventListener('change', (e) => {
             currentWeek = parseInt(e.target.value, 10);
@@ -330,6 +381,8 @@
 
                 saveProgress();
                 updateProgress(currentWeek);
+                updateOverallProgress();
+                calculateAndUpdateRealCurrentWeek();
             }
         });
 
@@ -341,4 +394,5 @@
     </script>
 </body>
 </html>
+
 
