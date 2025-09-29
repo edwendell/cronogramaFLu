@@ -81,20 +81,17 @@
             background-position: right 0.5rem center;
             background-size: 1.5em 1.5em;
         }
-
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
 
     <div class="container mx-auto p-4 md:p-8">
         
-        <!-- Cabeçalho -->
         <header class="text-center mb-12">
             <h1 class="text-3xl md:text-5xl font-bold pb-2" style="color: var(--text-color);">Planner de Estudos Anual</h1>
             <p class="mt-2 text-lg" style="color: var(--text-color); opacity: 0.8;">Acompanhe seu progresso no Cronograma dos Fluentes.</p>
         </header>
 
-        <!-- Progresso Geral -->
         <div class="neumorphic-out p-6 mb-8">
             <h2 class="text-xl font-semibold text-center mb-4" style="color: var(--text-color);">Progresso Geral do Cronograma</h2>
             <div class="w-full">
@@ -108,16 +105,14 @@
             </div>
         </div>
 
-        <!-- Seletor de Semana e Barra de Progresso -->
         <div class="neumorphic-out p-6 mb-8 sticky top-4 z-10">
             <h2 class="text-xl font-semibold text-center mb-6" style="color: var(--text-color);">
-                Em qual semana você está: <span id="current-week-display" class="font-bold" style="color: var(--accent-color);"></span>
+                Em qual semana você está: <span id="current-week-display" class="font-bold" style="color: var(--accent-color);">1</span>
             </h2>
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <label for="week-selector" class="text-lg font-semibold" style="color: var(--text-color);">Semana:</label>
                     <select id="week-selector" class="neu-select text-sm w-24">
-                        <!-- Opções de semanas serão geradas pelo JavaScript -->
                     </select>
                 </div>
                 <div class="w-full md:w-1/2">
@@ -132,90 +127,32 @@
             </div>
         </div>
 
-        <!-- Conteúdo do Planner -->
         <main id="planner-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            <!-- Os cards dos dias serão gerados pelo JavaScript -->
         </main>
         
         <footer class="text-center mt-12" style="color: var(--text-color); opacity: 0.7;">
             <p>Criado com base no "Planner Anual - 52 Semanas - CDF".</p>
+            <p class="text-xs mt-2">ID de Sessão: <span id="session-id">...</span></p>
         </footer>
 
     </div>
 
-    <script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
         // --- INÍCIO: DADOS DO PLANNER ---
         const linkIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="link-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 001.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" /><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" /></svg>`;
         const linkClass = `class="font-semibold hover:opacity-80 transition-opacity inline-flex items-center" style="color: var(--accent-color);" target="_blank" rel="noopener noreferrer"`;
-        
         const plannerData = [
-            // Semana 1
-            { week: 1, days: [
-                { day: 1, tasks: ["Assista à aula 1.", "Faça o Quiz 1.", "Escreva um breve texto se apresentando, revelando seu nome, sua origem e o que você faz. Use os conhecimentos adquiridos em aula.", "Compartilhe o texto na nossa comunidade para nos conhecermos melhor."] },
-                { day: 2, tasks: ["Assista à aula 2.", "Faça o Quiz 2.", `Escreva entre 3 a 5 frases sobre o seu dia. Use o <a href="https://context.reverso.net/" ${linkClass}>Reverso Contexto${linkIcon}</a> ou <a href="https://www.collinsdictionary.com/" ${linkClass}>Collins${linkIcon}</a> se precisar.`, "Use o aplicativo Speak Aloud para treinar sua pronúncia. Insira cada frase do seu texto, ouça atentamente e repita em voz alta."] },
-                { day: 3, tasks: ["Assista à aula 3.", "Faça o Quiz 3.", `Acompanhe um canal gringo no <a href="https://www.youtube.com/" ${linkClass}>YouTube${linkIcon}</a>. Use a nossa lista de canais, acessando o módulo de introdução.`, "Assista ao vídeo que foi escolhido e tente identificar o tema principal ou palavras que já conhece."] },
-                { day: 4, tasks: ["Assista à aula 4.", "Faça o Quiz 4.", "Use este prompt para ter uma conversa com o Fluêncio, nosso chatbot: \"Hi! I'm [your name]. I am learning English. Let's talk!\"", "Você também pode pedir ao Fluêncio que corrija suas frases."] },
-                { day: 5, tasks: ["Assista à aula 5.", "Faça o Quiz 5.", `Aprenda com uma música usando o <a href="https://lyricstraining.com/" ${linkClass}>Lyricstraining${linkIcon}</a>. Procure por sua música favorita e selecione seu nível.`, "Anote algumas palavras novas da música e busque pelo seu significado. Crie frases de exemplo."] },
-                { day: 6, tasks: ["Assista à aula 6.", "Faça o Quiz 6.", `Procure vocabulários de objetos de um cômodo da sua casa usando o <a href="https://www.collinsdictionary.com/" ${linkClass}>dicionário Collins${linkIcon}</a>.`, "Cole notas adesivas nos objetos e faça frases com algumas das palavras que buscou."] },
-                { day: 7, tasks: ["Assista à aula 7.", "Faça o Quiz 7.", "Escreva um breve resumo sobre a sua semana em inglês e poste em nossa comunidade.", "Assista a um filme ou série em inglês. Tente focar na pronúncia e imitar o que está sendo falado."] }
-            ]},
-            // Semana 2
-            { week: 2, days: [
-                { day: 8, tasks: ["Assista à aula 8.", "Faça o Quiz 8.", `Escolha uma receita no site <a href="https://tasty.co/" ${linkClass}>Tasty${linkIcon}</a>, leia seus ingredientes e método de preparo.`, "Use o aplicativo Speak Aloud para treinar a pronúncia das palavras novas."] },
-                { day: 9, tasks: ["Assista à aula 9.", "Faça o Quiz 9.", `Escreva sua receita favorita em inglês. Use o <a href="https://context.reverso.net/" ${linkClass}>Reverso Contexto${linkIcon}</a> ou <a href="https://www.collinsdictionary.com/" ${linkClass}>Collins${linkIcon}</a>.`, "Use o Speak Aloud para praticar a pronúncia das palavras que você estudou."] },
-                { day: 10, tasks: ["Assista à aula 10.", "Faça o Quiz 10.", `Escute a notícia <a href="https://www.newsinlevels.com/products/people-throw-away-food-level-1/" ${linkClass}>'People throw away food'${linkIcon}</a> (nível 1).`, "Leia a notícia, busque pelas palavras que não conhece e responda à pergunta nos comentários."] },
-                { day: 11, tasks: ["Assista à aula 11.", "Faça o Quiz 11.", `Assista a um tutorial de culinária em inglês no <a href="https://www.youtube.com/" ${linkClass}>YouTube${linkIcon}</a>. Pause o vídeo e repita em voz alta.`, "Anote os ingredientes e, se possível, reproduza o prato e compartilhe uma foto na comunidade."] },
-                { day: 12, tasks: ["Assista à aula 12.", "Faça o Quiz 12.", "Converse com o Fluêncio: \"Hi! What is your favorite food? I like [name of food]. Do you like it too?\"", `Expanda seu vocabulário no site <a href="https://www.eslgamesplus.com/" ${linkClass}>ESL Games${linkIcon}</a> com o tema "Food".`] },
-                { day: 13, tasks: ["Assista à aula 13.", "Faça o Quiz 13.", `Escute o Podcast <a href="https://learningenglish.voanews.com/a/let-s-learn-english-lesson-19-what-s-that-smell-/3415910.html" ${linkClass}>'The smell of coffee'${linkIcon}</a>. Leia o vocabulário e a transcrição.`, "Poste na comunidade se você gosta ou não de café e com que frequência você toma."] },
-                { day: 14, tasks: ["Assista à aula 14.", "Faça o Quiz 14.", "Assista a um programa de TV sobre culinária.", "Imagine que você é o apresentador. Escreva um mini-roteiro da receita que você ensinaria."] }
-            ]},
-            // Semana 3
-            { week: 3, days: [
-                 { day: 15, tasks: ["Assista à aula 15.", "Faça o Quiz 15.", "Crie uma lista de compras pesquisando o vocabulário de itens do seu dia-a-dia.", "Leia as embalagens dos produtos em inglês enquanto faz compras."] },
-                 { day: 16, tasks: ["Assista à aula 16.", "Faça o Quiz 16.", `Explore o <a href="https://www.esl-lab.com/" ${linkClass}>ESL Lab${linkIcon}</a> para ouvir áudios em inglês sobre diferentes tópicos.`, `Navegue pela seção 'Listen & Watch' do <a href="https://www.bbc.co.uk/learningenglish" ${linkClass}>BBC Learning English${linkIcon}</a>.`] },
-                 { day: 17, tasks: ["Assista à aula 17.", "Faça o Quiz 17.", `Assista a um vídeo tutorial sobre projetos DIY (Faça você mesmo) no <a href="https://www.youtube.com/" ${linkClass}>YouTube${linkIcon}</a>.`, `Explore comics e graphic novels em sites como <a href="https://www.gutenberg.org/" ${linkClass}>Project Gutenberg${linkIcon}</a> ou <a href="https://www.webtoons.com/" ${linkClass}>Webtoon${linkIcon}</a>.`] },
-                 { day: 18, tasks: ["Assista à aula 18.", "Faça o Quiz 18.", `Faça a palavra cruzada do dia no site <a href="https://www.usatoday.com/crosswords" ${linkClass}>USA Today${linkIcon}</a>.`, "Escreva sua rotina em inglês (atividades matinais, trabalho, estudos e lazer)."] },
-                 { day: 19, tasks: ["Assista à aula 19.", "Faça o Quiz 19.", "Leia em voz alta o e-mail ou carta que você escreveu.", `Pesquise por um restaurante famoso e explore seu site oficial.`] },
-                 { day: 20, tasks: ["Assista à aula 20.", "Faça o Quiz 20.", "Converse com o Fluêncio sobre sua rotina: \"Hi! Let's talk about routine. Ask me some questions\".", "Escreva uma carta simples ou um e-mail para um amigo em inglês."] },
-                 { day: 21, tasks: ["Assista à aula 21.", "Faça o Quiz 21.", "Crie cartões de memorização com palavras que você estudou recentemente.", "Imagine que está em um supermercado e escreva um diálogo pedindo ajuda para encontrar itens da sua lista."] }
-            ]},
-            // Semana 4
-            { week: 4, days: [
-                { day: 22, tasks: ["Assista à aula 22.", "Faça o Quiz 22.", "Leia posts das redes sociais dos seus artistas favoritos.", "Assista 15 segundos de uma série ou filme sem legendas e anote o que entendeu."] },
-                { day: 23, tasks: ["Assista à aula 23.", "Faça o Quiz 23.", "Leia uma biografia curta de um dos seus artistas favoritos.", `Ouça diálogos simples no site <a href="https://www.elllo.org/" ${linkClass}>Elllo${linkIcon}</a>, selecionando o nível iniciante.`] },
-                { day: 24, tasks: ["Assista à aula 24.", "Faça o Quiz 24.", `Leia uma notícia sobre seu artista favorito em sites como <a href="https://people.com/" ${linkClass}>People${linkIcon}</a> ou <a href="https://www.eonline.com/" ${linkClass}>E! News${linkIcon}</a>.`, `Use o <a href="https://lyricstraining.com/" ${linkClass}>Lyrics Training${linkIcon}</a> para estudar com uma música de um artista que você gosta.`] },
-                { day: 25, tasks: ["Assista à aula 25.", "Faça o Quiz 25.", "Leia em voz alta um trecho de notícia ou post do seu artista.", `Escute uma entrevista em um podcast, como o <a href="https://armchairexpertpod.com/" ${linkClass}>The Armchair Expert${linkIcon}</a>.`] },
-                { day: 26, tasks: ["Assista à aula 26.", "Faça o Quiz 26.", "Escreva 3 frases sobre o seu dia e compartilhe na comunidade.", "Converse com o Fluêncio: \"Hello, Let's chat about [nome do artista]. Ask me questions about him/her.\""] },
-                { day: 27, tasks: ["Assista à aula 27.", "Faça o Quiz 27.", `Faça um quiz divertido no site <a href="https://www.eslgamesplus.com/" ${linkClass}>ESL Games${linkIcon}</a>.`, "Tente imitar a pronúncia do seu artista favorito, seja em músicas ou cenas de filmes."] },
-                { day: 28, tasks: ["Assista à aula 28.", "Faça o Quiz 28.", "Crie pelo menos 5 frases com as palavras que você aprendeu durante a semana.", "Procure por vocabulários de objetos do seu quarto e cole notas adesivas para memorizar."] }
-            ]},
+            { week: 1, days: [ { day: 1, tasks: ["Assista à aula 1.", "Faça o Quiz 1.", "Escreva um breve texto se apresentando, revelando seu nome, sua origem e o que você faz. Use os conhecimentos adquiridos em aula.", "Compartilhe o texto na nossa comunidade para nos conhecermos melhor."] }, { day: 2, tasks: ["Assista à aula 2.", "Faça o Quiz 2.", `Escreva entre 3 a 5 frases sobre o seu dia. Use o <a href="https://context.reverso.net/" ${linkClass}>Reverso Contexto${linkIcon}</a> ou <a href="https://www.collinsdictionary.com/" ${linkClass}>Collins${linkIcon}</a> se precisar.`, "Use o aplicativo Speak Aloud para treinar sua pronúncia. Insira cada frase do seu texto, ouça atentamente e repita em voz alta."] }, { day: 3, tasks: ["Assista à aula 3.", "Faça o Quiz 3.", `Acompanhe um canal gringo no <a href="https://www.youtube.com/" ${linkClass}>YouTube${linkIcon}</a>. Use a nossa lista de canais, acessando o módulo de introdução.`, "Assista ao vídeo que foi escolhido e tente identificar o tema principal ou palavras que já conhece."] }, { day: 4, tasks: ["Assista à aula 4.", "Faça o Quiz 4.", "Use este prompt para ter uma conversa com o Fluêncio, nosso chatbot: \"Hi! I'm [your name]. I am learning English. Let's talk!\"", "Você também pode pedir ao Fluêncio que corrija suas frases."] }, { day: 5, tasks: ["Assista à aula 5.", "Faça o Quiz 5.", `Aprenda com uma música usando o <a href="https://lyricstraining.com/" ${linkClass}>Lyricstraining${linkIcon}</a>. Procure por sua música favorita e selecione seu nível.`, "Anote algumas palavras novas da música e busque pelo seu significado. Crie frases de exemplo."] }, { day: 6, tasks: ["Assista à aula 6.", "Faça o Quiz 6.", `Procure vocabulários de objetos de um cômodo da sua casa usando o <a href="https://www.collinsdictionary.com/" ${linkClass}>dicionário Collins${linkIcon}</a>.`, "Cole notas adesivas nos objetos e faça frases com algumas das palavras que buscou."] }, { day: 7, tasks: ["Assista à aula 7.", "Faça o Quiz 7.", "Escreva um breve resumo sobre a sua semana em inglês e poste em nossa comunidade.", "Assista a um filme ou série em inglês. Tente focar na pronúncia e imitar o que está sendo falado."] } ]},
+            { week: 2, days: [ { day: 8, tasks: ["Assista à aula 8.", "Faça o Quiz 8.", `Escolha uma receita no site <a href="https://tasty.co/" ${linkClass}>Tasty${linkIcon}</a>, leia seus ingredientes e método de preparo.`, "Use o aplicativo Speak Aloud para treinar a pronúncia das palavras novas."] }, { day: 9, tasks: ["Assista à aula 9.", "Faça o Quiz 9.", `Escreva sua receita favorita em inglês. Use o <a href="https://context.reverso.net/" ${linkClass}>Reverso Contexto${linkIcon}</a> ou <a href="https://www.collinsdictionary.com/" ${linkClass}>Collins${linkIcon}</a>.`, "Use o Speak Aloud para praticar a pronúncia das palavras que você estudou."] }, { day: 10, tasks: ["Assista à aula 10.", "Faça o Quiz 10.", `Escute a notícia <a href="https://www.newsinlevels.com/products/people-throw-away-food-level-1/" ${linkClass}>'People throw away food'${linkIcon}</a> (nível 1).`, "Leia a notícia, busque pelas palavras que não conhece e responda à pergunta nos comentários."] }, { day: 11, tasks: ["Assista à aula 11.", "Faça o Quiz 11.", `Assista a um tutorial de culinária em inglês no <a href="https://www.youtube.com/" ${linkClass}>YouTube${linkIcon}</a>. Pause o vídeo e repita em voz alta.`, "Anote os ingredientes e, se possível, reproduza o prato e compartilhe uma foto na comunidade."] }, { day: 12, tasks: ["Assista à aula 12.", "Faça o Quiz 12.", "Converse com o Fluêncio: \"Hi! What is your favorite food? I like [name of food]. Do you like it too?\"", `Expanda seu vocabulário no site <a href="https://www.eslgamesplus.com/" ${linkClass}>ESL Games${linkIcon}</a> com o tema "Food".`] }, { day: 13, tasks: ["Assista à aula 13.", "Faça o Quiz 13.", `Escute o Podcast <a href="https://learningenglish.voanews.com/a/let-s-learn-english-lesson-19-what-s-that-smell-/3415910.html" ${linkClass}>'The smell of coffee'${linkIcon}</a>. Leia o vocabulário e a transcrição.`, "Poste na comunidade se você gosta ou não de café e com que frequência você toma."] }, { day: 14, tasks: ["Assista à aula 14.", "Faça o Quiz 14.", "Assista a um programa de TV sobre culinária.", "Imagine que você é o apresentador. Escreva um mini-roteiro da receita que você ensinaria."] } ]},
+            { week: 3, days: [ { day: 15, tasks: ["Assista à aula 15.", "Faça o Quiz 15.", "Crie uma lista de compras pesquisando o vocabulário de itens do seu dia-a-dia.", "Leia as embalagens dos produtos em inglês enquanto faz compras."] }, { day: 16, tasks: ["Assista à aula 16.", "Faça o Quiz 16.", `Explore o <a href="https://www.esl-lab.com/" ${linkClass}>ESL Lab${linkIcon}</a> para ouvir áudios em inglês sobre diferentes tópicos.`, `Navegue pela seção 'Listen & Watch' do <a href="https://www.bbc.co.uk/learningenglish" ${linkClass}>BBC Learning English${linkIcon}</a>.`] }, { day: 17, tasks: ["Assista à aula 17.", "Faça o Quiz 17.", `Assista a um vídeo tutorial sobre projetos DIY (Faça você mesmo) no <a href="https://www.youtube.com/" ${linkClass}>YouTube${linkIcon}</a>.`, `Explore comics e graphic novels em sites como <a href="https://www.gutenberg.org/" ${linkClass}>Project Gutenberg${linkIcon}</a> ou <a href="https://www.webtoons.com/" ${linkClass}>Webtoon${linkIcon}</a>.`] }, { day: 18, tasks: ["Assista à aula 18.", "Faça o Quiz 18.", `Faça a palavra cruzada do dia no site <a href="https://www.usatoday.com/crosswords" ${linkClass}>USA Today${linkIcon}</a>.`, "Escreva sua rotina em inglês (atividades matinais, trabalho, estudos e lazer)."] }, { day: 19, tasks: ["Assista à aula 19.", "Faça o Quiz 19.", "Leia em voz alta o e-mail ou carta que você escreveu.", `Pesquise por um restaurante famoso e explore seu site oficial.`] }, { day: 20, tasks: ["Assista à aula 20.", "Faça o Quiz 20.", "Converse com o Fluêncio sobre sua rotina: \"Hi! Let's talk about routine. Ask me some questions\".", "Escreva uma carta simples ou um e-mail para um amigo em inglês."] }, { day: 21, tasks: ["Assista à aula 21.", "Faça o Quiz 21.", "Crie cartões de memorização com palavras que você estudou recentemente.", "Imagine que está em um supermercado e escreva um diálogo pedindo ajuda para encontrar itens da sua lista."] } ]},
+            { week: 4, days: [ { day: 22, tasks: ["Assista à aula 22.", "Faça o Quiz 22.", "Leia posts das redes sociais dos seus artistas favoritos.", "Assista 15 segundos de uma série ou filme sem legendas e anote o que entendeu."] }, { day: 23, tasks: ["Assista à aula 23.", "Faça o Quiz 23.", "Leia uma biografia curta de um dos seus artistas favoritos.", `Ouça diálogos simples no site <a href="https://www.elllo.org/" ${linkClass}>Elllo${linkIcon}</a>, selecionando o nível iniciante.`] }, { day: 24, tasks: ["Assista à aula 24.", "Faça o Quiz 24.", `Leia uma notícia sobre seu artista favorito em sites como <a href="https://people.com/" ${linkClass}>People${linkIcon}</a> ou <a href="https://www.eonline.com/" ${linkClass}>E! News${linkIcon}</a>.`, `Use o <a href="https://lyricstraining.com/" ${linkClass}>Lyrics Training${linkIcon}</a> para estudar com uma música de um artista que você gosta.`] }, { day: 25, tasks: ["Assista à aula 25.", "Faça o Quiz 25.", "Leia em voz alta um trecho de notícia ou post do seu artista.", `Escute uma entrevista em um podcast, como o <a href="https://armchairexpertpod.com/" ${linkClass}>The Armchair Expert${linkIcon}</a>.`] }, { day: 26, tasks: ["Assista à aula 26.", "Faça o Quiz 26.", "Escreva 3 frases sobre o seu dia e compartilhe na comunidade.", "Converse com o Fluêncio: \"Hello, Let's chat about [nome do artista]. Ask me questions about him/her.\""] }, { day: 27, tasks: ["Assista à aula 27.", "Faça o Quiz 27.", `Faça um quiz divertido no site <a href="https://www.eslgamesplus.com/" ${linkClass}>ESL Games${linkIcon}</a>.`, "Tente imitar a pronúncia do seu artista favorito, seja em músicas ou cenas de filmes."] }, { day: 28, tasks: ["Assista à aula 28.", "Faça o Quiz 28.", "Crie pelo menos 5 frases com as palavras que você aprendeu durante a semana.", "Procure por vocabulários de objetos do seu quarto e cole notas adesivas para memorizar."] } ]},
         ];
-
-        // Função para gerar dados de exemplo para as semanas restantes
-        function generateSampleData() {
-            const existingWeeks = plannerData.length;
-            for (let i = existingWeeks + 1; i <= 52; i++) {
-                const weekData = {
-                    week: i,
-                    days: []
-                };
-                for (let j = 1; j <= 7; j++) {
-                    const dayNumber = (i - 1) * 7 + j;
-                    weekData.days.push({
-                        day: dayNumber,
-                        tasks: [
-                            `Assista à aula ${dayNumber}.`,
-                            `Faça o Quiz ${dayNumber}.`,
-                            `Atividade de escrita da semana ${i}, dia ${j}.`,
-                            `Atividade de escuta da semana ${i}, dia ${j}.`,
-                            `Atividade de conversação da semana ${i}, dia ${j}.`
-                        ]
-                    });
-                }
-                plannerData.push(weekData);
-            }
-        }
-        
+        function generateSampleData() { const existingWeeks = plannerData.length; for (let i = existingWeeks + 1; i <= 52; i++) { const weekData = { week: i, days: [] }; for (let j = 1; j <= 7; j++) { const dayNumber = (i - 1) * 7 + j; weekData.days.push({ day: dayNumber, tasks: [ `Assista à aula ${dayNumber}.`, `Faça o Quiz ${dayNumber}.`, `Atividade de escrita da semana ${i}, dia ${j}.`, `Atividade de escuta da semana ${i}, dia ${j}.`, `Atividade de conversação da semana ${i}, dia ${j}.` ] }); } plannerData.push(weekData); } }
         generateSampleData();
         // --- FIM: DADOS DO PLANNER ---
 
@@ -224,175 +161,177 @@
         const progressBar = document.getElementById('progress-bar');
         const progressText = document.getElementById('progress-text');
         const currentWeekDisplay = document.getElementById('current-week-display');
+        const sessionIdDisplay = document.getElementById('session-id');
         
         let currentWeek = 1;
         let completionStatus = {};
+        let userId = null;
+        let db;
+        let unsubscribe; // To detach the Firestore listener
 
-        // Carrega o progresso salvo
-        function loadProgress() {
-            const savedProgress = localStorage.getItem('plannerProgress');
-            if (savedProgress) {
-                completionStatus = JSON.parse(savedProgress);
+        // --- INÍCIO: LÓGICA DO FIREBASE ---
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            // Adicione a sua configuração do Firebase aqui como fallback, se necessário
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        db = getFirestore(app);
+
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                userId = user.uid;
+                sessionIdDisplay.textContent = userId;
+                loadProgressFromFirestore();
+            } else {
+                signInAnonymously(auth).catch(error => {
+                    console.error("Anonymous sign-in failed:", error);
+                });
             }
-            const savedWeek = localStorage.getItem('currentWeek');
-            if (savedWeek) {
-                currentWeek = parseInt(savedWeek, 10);
+        });
+
+        async function saveDataToFirestore() {
+            if (!userId) return;
+            const docRef = doc(db, "artifacts", appId, "users", userId, "planners", userId);
+            try {
+                await setDoc(docRef, { 
+                    completionStatus: completionStatus,
+                    currentWeek: currentWeek 
+                });
+            } catch (e) {
+                console.error("Error writing document: ", e);
             }
+        }
+        
+        function loadProgressFromFirestore() {
+            if (!userId) return;
+            const docRef = doc(db, "artifacts", appId, "users", userId, "planners", userId);
+            
+            if (unsubscribe) unsubscribe(); // Detach any existing listener
+
+            unsubscribe = onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    completionStatus = data.completionStatus || {};
+                    currentWeek = data.currentWeek || 1;
+                } else {
+                    console.log("No existing data, initializing.");
+                    completionStatus = {};
+                    currentWeek = 1;
+                }
+                initializeAppState();
+            });
+        }
+        // --- FIM: LÓGICA DO FIREBASE ---
+
+        function initializeAppState() {
+            populateWeekSelector();
+            renderWeek(currentWeek);
             updateOverallProgress();
             calculateAndUpdateRealCurrentWeek();
         }
 
-        // Salva o progresso
-        function saveProgress() {
-            localStorage.setItem('plannerProgress', JSON.stringify(completionStatus));
-            localStorage.setItem('currentWeek', currentWeek);
-        }
-
-        // Popula o seletor de semanas
         function populateWeekSelector() {
+            weekSelector.innerHTML = '';
             plannerData.forEach(week => {
                 const option = document.createElement('option');
                 option.value = week.week;
                 option.textContent = `${week.week}`;
-                if (week.week === currentWeek) {
-                    option.selected = true;
-                }
                 weekSelector.appendChild(option);
             });
+            weekSelector.value = currentWeek;
         }
 
-        // Renderiza a semana selecionada
         function renderWeek(weekNumber) {
             const weekData = plannerData.find(w => w.week === parseInt(weekNumber, 10));
             if (!weekData) return;
-
             plannerContent.innerHTML = '';
-            
             weekData.days.forEach(day => {
                 const dayCard = document.createElement('div');
                 dayCard.className = 'neumorphic-out p-6 flex flex-col gap-4';
-                
                 let tasksHtml = day.tasks.map((task, index) => {
                     const taskId = `w${weekNumber}-d${day.day}-t${index}`;
                     const isCompleted = completionStatus[taskId] || false;
-                    return `
-                        <li class="flex items-start">
-                            <input id="${taskId}" type="checkbox" ${isCompleted ? 'checked' : ''} class="custom-checkbox h-5 w-5 mt-1 flex-shrink-0" data-task-id="${taskId}">
-                            <label for="${taskId}" class="ml-3">
-                                <span class="task-text ${isCompleted ? 'completed' : ''}">${task}</span>
-                            </label>
-                        </li>
-                    `;
+                    return `<li class="flex items-start"><input id="${taskId}" type="checkbox" ${isCompleted ? 'checked' : ''} class="custom-checkbox h-5 w-5 mt-1 flex-shrink-0" data-task-id="${taskId}"><label for="${taskId}" class="ml-3"><span class="task-text ${isCompleted ? 'completed' : ''}">${task}</span></label></li>`;
                 }).join('');
-
-                dayCard.innerHTML = `
-                    <h2 class="text-xl font-bold border-b-2 pb-2 flex items-center gap-2" style="color: var(--text-color); border-color: rgba(163, 177, 198, 0.4)">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" style="color: var(--accent-color);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Dia ${day.day}
-                    </h2>
-                    <ul class="space-y-4 pt-2">
-                        ${tasksHtml}
-                    </ul>
-                `;
+                dayCard.innerHTML = `<h2 class="text-xl font-bold border-b-2 pb-2 flex items-center gap-2" style="color: var(--text-color); border-color: rgba(163, 177, 198, 0.4)"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" style="color: var(--accent-color);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>Dia ${day.day}</h2><ul class="space-y-4 pt-2">${tasksHtml}</ul>`;
                 plannerContent.appendChild(dayCard);
             });
-
             updateProgress(weekNumber);
         }
 
-        // Atualiza a barra de progresso
         function updateProgress(weekNumber) {
             const weekData = plannerData.find(w => w.week === parseInt(weekNumber, 10));
             if (!weekData) return;
-            
-            let totalTasks = 0;
-            let completedTasks = 0;
-
+            let totalTasks = 0, completedTasks = 0;
             weekData.days.forEach(day => {
                 totalTasks += day.tasks.length;
                 day.tasks.forEach((task, index) => {
-                    const taskId = `w${weekNumber}-d${day.day}-t${index}`;
-                    if (completionStatus[taskId]) {
-                        completedTasks++;
-                    }
+                    if (completionStatus[`w${weekNumber}-d${day.day}-t${index}`]) completedTasks++;
                 });
             });
-
             const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
             progressBar.style.width = `${percentage}%`;
             progressText.textContent = `${percentage}% completo`;
         }
         
-        // --- NOVAS FUNÇÕES ---
-
-        // Calcula e atualiza a semana atual com base no progresso real
         function calculateAndUpdateRealCurrentWeek() {
             let maxWeek = 0;
             for (const taskId in completionStatus) {
                 if (completionStatus[taskId]) {
                     const weekNum = parseInt(taskId.split('-')[0].substring(1));
-                    if (weekNum > maxWeek) {
-                        maxWeek = weekNum;
-                    }
+                    if (weekNum > maxWeek) maxWeek = weekNum;
                 }
             }
-            const displayWeek = maxWeek > 0 ? maxWeek : 1;
-            currentWeekDisplay.textContent = displayWeek;
+            currentWeekDisplay.textContent = maxWeek > 0 ? maxWeek : 1;
         }
 
-        // Atualiza a barra de progresso geral
         function updateOverallProgress() {
-            const totalTasks = plannerData.reduce((acc, week) => {
-                return acc + week.days.reduce((dayAcc, day) => dayAcc + day.tasks.length, 0);
-            }, 0);
-
+            const totalTasks = plannerData.reduce((acc, week) => acc + week.days.reduce((dayAcc, day) => dayAcc + day.tasks.length, 0), 0);
             const completedTasks = Object.values(completionStatus).filter(status => status).length;
             const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-            
             const overallProgressBar = document.getElementById('overall-progress-bar');
             const overallProgressText = document.getElementById('overall-progress-text');
-
             if (overallProgressBar && overallProgressText) {
                 overallProgressBar.style.width = `${percentage}%`;
                 overallProgressText.textContent = `${percentage}% completo`;
             }
         }
 
-
-        // Event Listeners
         weekSelector.addEventListener('change', (e) => {
             currentWeek = parseInt(e.target.value, 10);
             renderWeek(currentWeek);
-            saveProgress();
+            saveDataToFirestore();
         });
 
         plannerContent.addEventListener('change', (e) => {
             if (e.target.type === 'checkbox') {
                 const taskId = e.target.dataset.taskId;
                 completionStatus[taskId] = e.target.checked;
-
                 const label = e.target.nextElementSibling;
-                if (label) {
-                    const textSpan = label.querySelector('.task-text');
-                    textSpan.classList.toggle('completed', e.target.checked);
-                }
-
-                saveProgress();
+                if (label) label.querySelector('.task-text').classList.toggle('completed', e.target.checked);
+                
+                saveDataToFirestore(); // Updates are now sent to Firestore
+                
+                // UI updates are handled by the onSnapshot listener, but we can call them for immediate feedback too
                 updateProgress(currentWeek);
                 updateOverallProgress();
                 calculateAndUpdateRealCurrentWeek();
             }
         });
 
-        // Inicialização
+        // Load initial data
         document.body.style.backgroundColor = 'var(--bg-color)';
-        loadProgress();
-        populateWeekSelector();
-        renderWeek(currentWeek);
     </script>
 </body>
 </html>
-
 
