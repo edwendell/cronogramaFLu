@@ -96,6 +96,9 @@
 
         <!-- Seletor de Semana e Barra de Progresso -->
         <div class="neumorphic-out p-6 mb-8 sticky top-4 z-10">
+            <h2 class="text-xl font-semibold text-center mb-6" style="color: var(--text-color);">
+                Em qual semana você está: <span id="current-week-display" class="font-bold" style="color: var(--accent-color);"></span>
+            </h2>
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <label for="week-selector" class="text-lg font-semibold" style="color: var(--text-color);">Semana:</label>
@@ -206,6 +209,7 @@
         const plannerContent = document.getElementById('planner-content');
         const progressBar = document.getElementById('progress-bar');
         const progressText = document.getElementById('progress-text');
+        const currentWeekDisplay = document.getElementById('current-week-display');
         
         let currentWeek = 1;
         let completionStatus = {};
@@ -247,6 +251,7 @@
             if (!weekData) return;
 
             plannerContent.innerHTML = '';
+            currentWeekDisplay.textContent = weekNumber;
             
             weekData.days.forEach(day => {
                 const dayCard = document.createElement('div');
