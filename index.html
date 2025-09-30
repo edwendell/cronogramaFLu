@@ -1,503 +1,224 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Planner de Estudos - Sincronizado</title>
-
-    <!-- Tailwind e Font -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        :root {
-            --bg-color: #e0e5ec;
-            --light-shadow: #ffffff;
-            --dark-shadow: #a3b1c6;
-            --accent-color: #4a50bc;
-            --text-color: #5c677b;
-        }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); }
-        .neumorphic-out { border-radius: 16px; background: var(--bg-color); box-shadow: 8px 8px 15px var(--dark-shadow), -8px -8px 15px var(--light-shadow); }
-        .neumorphic-btn { border-radius: 10px; background: var(--bg-color); box-shadow: 5px 5px 10px var(--dark-shadow), -5px -5px 10px var(--light-shadow); transition: all .12s; }
-        .custom-checkbox { -webkit-appearance:none; appearance:none; background-color:var(--bg-color); border-radius:6px; cursor:pointer; box-shadow:3px 3px 6px var(--dark-shadow), -3px -3px 6px var(--light-shadow); width:1.2rem; height:1.2rem; display:inline-block; vertical-align:middle; }
-        .custom-checkbox:checked { box-shadow:inset 2px 2px 5px var(--dark-shadow), inset -2px -2px 5px var(--light-shadow); background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='%234a50bc' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e"); background-repeat:no-repeat; background-position:center; }
-        .task-text.completed { text-decoration:line-through; opacity:.6; }
-        .progress-track { background:var(--bg-color); border-radius:9999px; box-shadow: inset 2px 2px 5px var(--dark-shadow), inset -2px -2px 5px var(--light-shadow); }
-        .progress-fill { background-color:var(--accent-color); border-radius:9999px; }
-        .neu-select { -webkit-appearance:none; appearance:none; background-color:var(--bg-color); border:none; padding:.6rem; border-radius:8px; box-shadow:3px 3px 6px var(--dark-shadow), -3px -3px 6px var(--light-shadow); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235c677b'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd' /%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right .5rem center; background-size:1.2rem 1.2rem; }
-        .code-block { background: rgba(0,0,0,0.05); padding:1rem; border-radius:8px; font-family: monospace; white-space: pre-wrap; font-size: .9rem; border:1px solid rgba(0,0,0,0.08); }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Planner de Estudos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-800">
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
+  <h1 class="text-2xl font-bold mb-4">📅 Planner de Estudos</h1>
 
-    <!-- Overlay (loading / erros) -->
-    <div id="overlay-screen" class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-70 hidden">
-        <div class="neumorphic-out p-6 rounded-lg max-w-lg w-full mx-4 text-left">
-            <h3 id="overlay-title" class="text-2xl font-bold mb-2" style="color:var(--accent-color)">A carregar...</h3>
-            <div id="overlay-content" class="text-sm" style="color:var(--text-color)">Aguarde...</div>
-            <div class="mt-4 text-right">
-                <button id="overlay-close" class="neumorphic-btn px-3 py-1">Fechar</button>
-            </div>
-        </div>
+  <!-- Área de login -->
+  <div id="loginArea">
+    <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+      Entrar com Google
+    </button>
+  </div>
+
+  <!-- Área do planner -->
+  <div id="plannerArea" class="hidden w-full max-w-4xl">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold">Suas Semanas</h2>
+      <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
+        Sair
+      </button>
     </div>
 
-    <!-- Login Screen -->
-    <div id="login-screen" class="fixed inset-0 flex items-center justify-center z-40">
-        <div class="neumorphic-out p-8 rounded-lg max-w-md w-full mx-4 text-center">
-            <h3 class="text-2xl font-bold mb-2" style="color:var(--accent-color)">Bem-vindo(a)</h3>
-            <p class="mb-6" style="color:var(--text-color)">Aceda ao seu planner de estudos e sincronize entre dispositivos.</p>
-            <button id="google-login-btn" class="neumorphic-btn w-full py-3 px-4 flex items-center justify-center font-semibold" style="color:var(--text-color);">
-                <svg class="w-6 h-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="height:1.2rem;width:1.2rem"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3c-1.65 4.66-6.08 8-11.3 8c-6.63 0-12-5.37-12-12s5.37-12 12-12c3.06 0 5.84 1.15 7.96 3.04l5.66-5.66C34.05 6.05 29.27 4 24 4C12.96 4 4 12.96 4 24s8.96 20 20 20 20-8.96 20-20c0-1.34-.14-2.65-.4-3.9z"/></svg>
-                Entrar com Google
-            </button>
-            <p class="mt-4 text-xs" style="color:var(--text-color)">Para testes locais adicione <strong>localhost</strong> em Authentication → Domínios autorizados no Firebase Console.</p>
-        </div>
-    </div>
+    <!-- Lista de semanas -->
+    <div id="weeksContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </div>
 
-    <!-- Main App -->
-    <div id="main-container" class="container mx-auto p-4 md:p-8 hidden">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-5xl font-bold pb-2" style="color:var(--text-color)">Planner de Estudos Anual</h1>
-            <p id="welcome-message" class="mt-2 text-lg" style="color:var(--text-color);opacity:.85">Acompanhe seu progresso sincronizado.</p>
-        </header>
+  <script>
+    // CONFIG FIREBASE (substituir pelos seus dados)
+    const firebaseConfig = {
+      apiKey: "FIREBASE_CONFIG_AQUI",
+      authDomain: "FIREBASE_CONFIG_AQUI",
+      projectId: "FIREBASE_CONFIG_AQUI",
+      storageBucket: "FIREBASE_CONFIG_AQUI",
+      messagingSenderId: "FIREBASE_CONFIG_AQUI",
+      appId: "FIREBASE_CONFIG_AQUI"
+    };
 
-        <!-- Overall progress -->
-        <div class="neumorphic-out p-6 mb-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold" style="color:var(--text-color)">Progresso Geral</h2>
-                <div class="text-sm font-semibold" id="overall-progress-text" style="color:var(--accent-color)">0%</div>
-            </div>
-            <div class="w-full h-4 progress-track">
-                <div id="overall-progress-bar" class="h-4 progress-fill" style="width:0%"></div>
-            </div>
-        </div>
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-        <!-- Week selector -->
-        <div class="neumorphic-out p-6 mb-6 sticky top-4 z-10">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div class="flex items-center gap-3">
-                    <label for="week-selector" class="text-lg font-semibold" style="color:var(--text-color)">Semana:</label>
-                    <select id="week-selector" class="neu-select text-sm w-28"></select>
-                    <button id="prev-week" class="ml-2 neomorphic-btn px-3 py-1">◀</button>
-                    <button id="next-week" class="neomorphic-btn px-3 py-1">▶</button>
-                </div>
-                <div class="w-full md:w-1/2">
-                    <div class="flex justify-between mb-1">
-                        <span class="text-base font-medium" style="color:var(--accent-color)">Progresso da Semana</span>
-                        <span id="progress-text" class="text-sm font-medium" style="color:var(--accent-color)">0%</span>
-                    </div>
-                    <div class="w-full h-2.5 progress-track">
-                        <div id="progress-bar" class="h-2.5 progress-fill" style="width:0%"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    const loginArea = document.getElementById("loginArea");
+    const loginBtn = document.getElementById("loginBtn");
+    const plannerArea = document.getElementById("plannerArea");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const weeksContainer = document.getElementById("weeksContainer");
 
-        <!-- Planner content -->
-        <main id="planner-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"></main>
+    let plannerRef = null;
+    let unsubscribe = null;
 
-        <footer class="text-center mt-6" style="color:var(--text-color);opacity:.75">
-            <p>Dados salvos em: <code>planners/{userId}</code> — campos: <strong>completionStatus</strong> e <strong>currentWeek</strong>.</p>
-        </footer>
-    </div>
+    // LOGIN
+    loginBtn.addEventListener("click", () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(err => {
+        alert("Erro no login: " + err.message);
+        console.error(err);
+      });
+    });
 
-    <!-- Firebase (módulos) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    // LOGOUT
+    logoutBtn.addEventListener("click", () => {
+      if (unsubscribe) unsubscribe();
+      auth.signOut();
+    });
 
-        // ---------- DADOS DO PLANNER ----------
-        const linkIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 ml-2" viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 001.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>`;
-        const linkClass = `class="font-semibold hover:opacity-80 transition-opacity inline-flex items-center" style="color: var(--accent-color);" target="_blank" rel="noopener noreferrer"`;
+    // MONITOR DE LOGIN
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginArea.classList.add("hidden");
+        plannerArea.classList.remove("hidden");
+        startPlanner(user.uid);
+      } else {
+        plannerArea.classList.add("hidden");
+        loginArea.classList.remove("hidden");
+      }
+    });
 
-        // base: semana 1 detalhada (exemplo) + gerador para 2..52
-        const plannerData = [
-            {
-                week: 1,
-                days: [
-                    { day: 1, tasks: ["Assista à aula 1.", "Faça o Quiz 1.", "Escreva um breve texto se apresentando, revelando seu nome, sua origem e o que você faz. Use os conhecimentos adquiridos em aula.", "Compartilhe o texto na nossa comunidade para nos conhecermos melhor."] },
-                    { day: 2, tasks: ["Assista à aula 2.", "Faça o Quiz 2.", `Escreva entre 3 a 5 frases sobre o seu dia. Use o <a href="https://context.reverso.net/" ${linkClass}>Reverso Contexto${linkIcon}</a> ou <a href="https://www.collinsdictionary.com/" ${linkClass}>Collins${linkIcon}</a> se precisar.`, "Use o aplicativo Speak Aloud para treinar sua pronúncia."] },
-                    { day: 3, tasks: ["Assista à aula 3.", "Faça o Quiz 3.", `Acompanhe um canal no <a href="https://www.youtube.com/" ${linkClass}>YouTube${linkIcon}</a> e identifique palavras-chave.`, "Tente resumir o vídeo em 3 frases."] },
-                    { day: 4, tasks: ["Assista à aula 4.", "Faça o Quiz 4.", "Converse com o Fluêncio: \"Hi! I'm [your name]. I am learning English. Let's talk!\"", "Peça ao Fluêncio para corrigir suas frases."] },
-                    { day: 5, tasks: ["Assista à aula 5.", "Faça o Quiz 5.", `Aprenda com uma música usando o <a href="https://lyricstraining.com/" ${linkClass}>Lyricstraining${linkIcon}</a>.`, "Anote vocabulários novos e crie exemplos."] },
-                    { day: 6, tasks: ["Assista à aula 6.", "Faça o Quiz 6.", "Aprenda vocabulários de um cômodo da sua casa e cole notas adesivas nos objetos."] },
-                    { day: 7, tasks: ["Assista à aula 7.", "Faça o Quiz 7.", "Escreva um resumo da semana em inglês e compartilhe.", "Assista a um filme/episódio com foco na pronúncia."] }
-                ]
-            }
-        ];
-        function generateSampleData() {
-            const existing = plannerData.length;
-            if (existing >= 52) return;
-            for (let i = existing + 1; i <= 52; i++) {
-                const weekObj = { week: i, days: [] };
-                for (let j = 1; j <= 7; j++) {
-                    const dayNumber = (i - 1) * 7 + j;
-                    weekObj.days.push({
-                        day: dayNumber,
-                        tasks: [
-                            `Assista à aula ${dayNumber}.`,
-                            `Faça o Quiz ${dayNumber}.`,
-                            `Atividade de escrita da semana ${i}, dia ${j}.`,
-                            `Atividade de escuta da semana ${i}, dia ${j}.`
-                        ]
-                    });
-                }
-                plannerData.push(weekObj);
-            }
-        }
-        generateSampleData();
-        // ---------- FIM DADOS ----------
-
-        // DOM
-        const overlayScreen = document.getElementById('overlay-screen');
-        const overlayTitle = document.getElementById('overlay-title');
-        const overlayContent = document.getElementById('overlay-content');
-        const overlayClose = document.getElementById('overlay-close');
-
-        const loginScreen = document.getElementById('login-screen');
-        const googleLoginBtn = document.getElementById('google-login-btn');
-
-        const mainContainer = document.getElementById('main-container');
-        const welcomeMessage = document.getElementById('welcome-message');
-        const weekSelector = document.getElementById('week-selector');
-        const plannerContent = document.getElementById('planner-content');
-        const progressBar = document.getElementById('progress-bar');
-        const progressText = document.getElementById('progress-text');
-        const overallProgressBar = document.getElementById('overall-progress-bar');
-        const overallProgressText = document.getElementById('overall-progress-text');
-        const prevWeekBtn = document.getElementById('prev-week');
-        const nextWeekBtn = document.getElementById('next-week');
-
-        // Firebase config (substitua se quiser usar outro projeto)
-        const firebaseConfig = {
-            apiKey: "AIzaSyDtkw14S6v60cbjPKuqtzzQoCJRlzlR6w4",
-            authDomain: "planner-de-estudos-ec7c4.firebaseapp.com",
-            projectId: "planner-de-estudos-ec7c4",
-            storageBucket: "planner-de-estudos-ec7c4.firebasestorage.app",
-            messagingSenderId: "809041087779",
-            appId: "1:809041087779:web:66819ca4f44a90f26a5096"
-        };
-
-        // Init Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-        const db = getFirestore(app);
-
-        // State
-        let userId = null;
-        let completionStatus = {}; // { "w1-d1-t0": true, ... }
-        let currentWeek = 1;
-        let unsubscribe = null;
-        let dataLoaded = false;
-        let saveTimeout = null;
-
-        // Overlay helpers
-        function showOverlay(title, htmlContent, closable = true) {
-            overlayTitle.innerHTML = title;
-            overlayContent.innerHTML = htmlContent;
-            overlayScreen.classList.remove('hidden');
-            overlayClose.style.display = closable ? 'inline-block' : 'none';
-        }
-        function hideOverlay() {
-            overlayScreen.classList.add('hidden');
-        }
-        overlayClose.addEventListener('click', hideOverlay);
-
-        // Login
-        googleLoginBtn.addEventListener('click', async () => {
-            showOverlay('Entrando...', 'A abrir janela de autenticação...', false);
-            try {
-                await signInWithPopup(auth, provider);
-                // onAuthStateChanged cuidará do resto
-            } catch (err) {
-                console.error('Erro signInWithPopup:', err);
-                if (err.code === 'auth/unauthorized-domain') {
-                    showOverlay('Erro de Configuração: Domínio não autorizado', `
-                        <p>O domínio onde está a correr a aplicação não está autorizado no Firebase Authentication.</p>
-                        <ol class="list-decimal list-inside mt-2">
-                            <li>Aceda a <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" style="color:var(--accent-color)">Console do Firebase</a>.</li>
-                            <li>Vá em <strong>Authentication → Settings → Domínios autorizados</strong>.</li>
-                            <li>Adicione: <strong>${window.location.hostname}</strong> (ex: localhost) e guarde.</li>
-                        </ol>
-                    `, true);
-                } else if (err.code === 'auth/popup-closed-by-user') {
-                    hideOverlay();
-                } else {
-                    showOverlay('Erro de Autenticação', `<p>${err.message || err}</p>`);
-                }
-            }
+    // CRIA ESTRUTURA INICIAL DE 52 SEMANAS
+    function createInitialPlanner() {
+      const weeks = [];
+      for (let i = 1; i <= 52; i++) {
+        weeks.push({
+          week: i,
+          tasks: []
         });
-
-        // Auth state listener
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                userId = user.uid;
-                welcomeMessage.textContent = `Olá, ${user.displayName || 'Estudante'}! A carregar o seu progresso...`;
-                loginScreen.classList.add('hidden');
-                mainContainer.classList.add('hidden'); // exibiremos quando os dados estiverem prontos
-                showOverlay('A carregar dados', 'A sincronizar com o Firebase...', false);
-
-                try {
-                    await initializeUserData();
-                    setupRealtimeListener();
-                } catch (err) {
-                    console.error('Erro init listener:', err);
-                    showOverlay('Erro', 'Não foi possível inicializar os dados. Veja o console do browser para mais detalhes.');
-                }
-            } else {
-                // logout
-                userId = null;
-                completionStatus = {};
-                currentWeek = 1;
-                dataLoaded = false;
-                if (unsubscribe) unsubscribe();
-                unsubscribe = null;
-                mainContainer.classList.add('hidden');
-                loginScreen.classList.remove('hidden');
-                hideOverlay();
-            }
-        });
-
-        // Cria documento inicial se não existir
-        async function initializeUserData() {
-            const docRef = doc(db, 'planners', userId);
-            try {
-                const snap = await getDoc(docRef);
-                if (!snap.exists()) {
-                    await setDoc(docRef, { completionStatus: {}, currentWeek: 1 });
-                }
-            } catch (err) {
-                console.error('Erro inicializando dados do utilizador:', err);
-                // Se for permission-denied, mostre instruções
-                if (err.code === 'permission-denied') {
-                    showSecurityRulesError();
-                }
-                throw err;
-            }
-        }
-
-        // Listener em tempo real
-        function setupRealtimeListener() {
-            if (!userId) return;
-            const docRef = doc(db, 'planners', userId);
-
-            if (unsubscribe) unsubscribe();
-
-            unsubscribe = onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    completionStatus = data.completionStatus || {};
-                    currentWeek = data.currentWeek || 1;
-
-                    if (!dataLoaded) {
-                        dataLoaded = true;
-                        initializeAppState();
-                    } else {
-                        // só re-renderiza a semana atual (evita flicker)
-                        renderWeek(currentWeek);
-                        updateOverallProgress();
-                        calculateAndUpdateRealCurrentWeek();
-                    }
-                    hideOverlay();
-                } else {
-                    // documento removido? recria
-                    setDoc(docRef, { completionStatus: {}, currentWeek: 1 }, { merge: true }).catch(err => {
-                        console.error('Erro ao recriar doc:', err);
-                    });
-                }
-            }, (error) => {
-                console.error('Firestore onSnapshot error:', error);
-                if (error.code === 'permission-denied') {
-                    showSecurityRulesError();
-                } else {
-                    showOverlay('Erro de Sincronização', `<p>${error.message || 'Erro desconhecido ao sincronizar.'}</p>`);
-                }
-            });
-        }
-
-        function showSecurityRulesError() {
-            showOverlay('Erro de Permissão na Base de Dados', `
-                <p>A sua conta está autenticada, mas as regras de segurança do Firestore estão a impedir a leitura/escrita do seu progresso.</p>
-                <p class="mt-2"><strong>Ação necessária:</strong></p>
-                <ol class="list-decimal list-inside mt-2">
-                    <li>Aceda à <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" style="color:var(--accent-color)">Consola do Firebase</a>.</li>
-                    <li>Vá para <strong>Build → Firestore Database → Rules</strong>.</li>
-                    <li>Substitua o conteúdo por estas regras temporárias (apenas enquanto testa):</li>
-                </ol>
-                <div class="code-block mt-3">
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /planners/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      return { weeks };
     }
-  }
-}
-                </div>
-                <p class="mt-3">Depois de publicar as regras, recarregue a página.</p>
-            `, true);
-        }
 
-        // Debounced save
-        function scheduleSave() {
-            if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                saveDataToFirestore();
-            }, 700);
-        }
+    // INICIA PLANNER DO USUÁRIO
+    function startPlanner(uid) {
+      plannerRef = db.collection("planners").doc(uid);
 
-        // Save to Firestore (merge)
-        async function saveDataToFirestore() {
-            if (!userId || !dataLoaded) return;
-            const docRef = doc(db, 'planners', userId);
-            try {
-                await setDoc(docRef, { completionStatus: completionStatus, currentWeek: currentWeek }, { merge: true });
-            } catch (err) {
-                console.error('Erro a gravar no Firestore:', err);
-                if (err.code === 'permission-denied') showSecurityRulesError();
-            }
+      unsubscribe = plannerRef.onSnapshot(async (doc) => {
+        if (doc.exists) {
+          renderWeeks(doc.data().weeks || []);
+        } else {
+          try {
+            await plannerRef.set(createInitialPlanner());
+            console.log("Planner inicial criado.");
+          } catch (err) {
+            alert("Erro\nNão foi possível inicializar os dados. Veja o console do browser para mais detalhes.");
+            console.error(err);
+          }
         }
+      });
+    }
 
-        // Inicialização da UI local
-        function initializeAppState() {
-            populateWeekSelector();
-            weekSelector.value = currentWeek;
-            renderWeek(currentWeek);
-            updateOverallProgress();
-            calculateAndUpdateRealCurrentWeek();
-            loginScreen.classList.add('hidden');
-            mainContainer.classList.remove('hidden');
-            hideOverlay();
-        }
+    // RENDERIZA TODAS AS SEMANAS
+    function renderWeeks(weeks) {
+      weeksContainer.innerHTML = "";
+      weeks.forEach(weekObj => {
+        const card = document.createElement("div");
+        card.className = "bg-white shadow rounded p-3";
 
-        function populateWeekSelector() {
-            weekSelector.innerHTML = '';
-            plannerData.forEach(w => {
-                const opt = document.createElement('option');
-                opt.value = w.week;
-                opt.textContent = `Semana ${w.week}`;
-                weekSelector.appendChild(opt);
-            });
-        }
+        const title = document.createElement("h3");
+        title.className = "font-bold mb-2";
+        title.textContent = "Semana " + weekObj.week;
+        card.appendChild(title);
 
-        // Navegação semanas
-        prevWeekBtn.addEventListener('click', () => {
-            const idx = Math.max(1, parseInt(weekSelector.value, 10) - 1);
-            weekSelector.value = idx;
-            currentWeek = idx;
-            renderWeek(currentWeek);
-            scheduleSave();
+        // Lista de tarefas
+        const ul = document.createElement("ul");
+        (weekObj.tasks || []).forEach((t, i) => {
+          const li = document.createElement("li");
+          li.className = "flex justify-between items-center mb-1";
+
+          const span = document.createElement("span");
+          span.textContent = t.text;
+          if (t.done) span.classList.add("line-through", "text-gray-500");
+
+          const btns = document.createElement("div");
+
+          const doneBtn = document.createElement("button");
+          doneBtn.textContent = t.done ? "↩️" : "✅";
+          doneBtn.className = "mr-2";
+          doneBtn.onclick = () => toggleTask(weekObj.week, i, !t.done);
+
+          const delBtn = document.createElement("button");
+          delBtn.textContent = "🗑️";
+          delBtn.onclick = () => deleteTask(weekObj.week, i);
+
+          btns.appendChild(doneBtn);
+          btns.appendChild(delBtn);
+
+          li.appendChild(span);
+          li.appendChild(btns);
+          ul.appendChild(li);
         });
-        nextWeekBtn.addEventListener('click', () => {
-            const idx = Math.min(52, parseInt(weekSelector.value, 10) + 1);
-            weekSelector.value = idx;
-            currentWeek = idx;
-            renderWeek(currentWeek);
-            scheduleSave();
-        });
+        card.appendChild(ul);
 
-        weekSelector.addEventListener('change', (e) => {
-            currentWeek = parseInt(e.target.value, 10);
-            renderWeek(currentWeek);
-            scheduleSave();
-        });
+        // Campo para adicionar
+        const divAdd = document.createElement("div");
+        divAdd.className = "flex mt-2";
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "Nova tarefa...";
+        input.className = "flex-grow border rounded px-2 py-1";
+        const btn = document.createElement("button");
+        btn.textContent = "+";
+        btn.className = "ml-2 bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded";
+        btn.onclick = () => {
+          const text = input.value.trim();
+          if (!text) return;
+          addTask(weekObj.week, text);
+          input.value = "";
+        };
+        divAdd.appendChild(input);
+        divAdd.appendChild(btn);
+        card.appendChild(divAdd);
 
-        // Renderização da semana
-        function renderWeek(weekNumber) {
-            const weekData = plannerData.find(w => w.week === Number(weekNumber));
-            if (!weekData) return;
-            plannerContent.innerHTML = '';
-            weekData.days.forEach(day => {
-                const card = document.createElement('div');
-                card.className = 'neumorphic-out p-4';
-                const tasksHtml = day.tasks.map((task, index) => {
-                    const taskId = `w${weekNumber}-d${day.day}-t${index}`;
-                    const isCompleted = !!completionStatus[taskId];
-                    // cuidado: tarefas podem conter HTML (links)
-                    const content = typeof task === 'string' ? task : String(task);
-                    return `<li class="flex items-start gap-3"><input id="${taskId}" data-task-id="${taskId}" type="checkbox" ${isCompleted ? 'checked' : ''} class="custom-checkbox mt-1"><label for="${taskId}" class="ml-2"><span class="task-text ${isCompleted ? 'completed' : ''}">${content}</span></label></li>`;
-                }).join('');
+        weeksContainer.appendChild(card);
+      });
+    }
 
-                card.innerHTML = `
-                    <h3 class="text-lg font-semibold mb-3" style="color:var(--text-color)">Dia ${day.day}</h3>
-                    <ul class="space-y-3">${tasksHtml}</ul>
-                `;
-                plannerContent.appendChild(card);
-            });
-            updateProgress(weekNumber);
+    // ADICIONA TAREFA
+    function addTask(weekNumber, text) {
+      plannerRef.get().then(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          const weeks = data.weeks;
+          const idx = weeks.findIndex(w => w.week === weekNumber);
+          weeks[idx].tasks.push({ text, done: false });
+          plannerRef.set({ weeks });
         }
+      });
+    }
 
-        // evento delegação para checkboxes
-        plannerContent.addEventListener('change', (e) => {
-            const target = e.target;
-            if (target && target.dataset && target.dataset.taskId) {
-                const taskId = target.dataset.taskId;
-                completionStatus[taskId] = !!target.checked;
-                const label = target.parentElement.querySelector('.task-text');
-                if (label) label.classList.toggle('completed', target.checked);
-                updateProgress(currentWeek);
-                updateOverallProgress();
-                calculateAndUpdateRealCurrentWeek();
-                scheduleSave();
-            }
-        });
-
-        // Atualiza progresso semanal
-        function updateProgress(weekNumber) {
-            const weekData = plannerData.find(w => w.week === Number(weekNumber));
-            if (!weekData) return;
-            let total = 0, done = 0;
-            weekData.days.forEach(day => {
-                day.tasks.forEach((t, idx) => {
-                    total++;
-                    if (completionStatus[`w${weekNumber}-d${day.day}-t${idx}`]) done++;
-                });
-            });
-            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-            progressBar.style.width = `${pct}%`;
-            progressText.textContent = `${pct}% completo`;
+    // TOGGLE TAREFA
+    function toggleTask(weekNumber, taskIndex, done) {
+      plannerRef.get().then(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          const weeks = data.weeks;
+          const idx = weeks.findIndex(w => w.week === weekNumber);
+          weeks[idx].tasks[taskIndex].done = done;
+          plannerRef.set({ weeks });
         }
+      });
+    }
 
-        // Calcula e atualiza semana "real" baseada em progresso
-        function calculateAndUpdateRealCurrentWeek() {
-            let maxWeek = 0;
-            for (const k in completionStatus) {
-                if (completionStatus[k]) {
-                    const weekNum = parseInt(k.split('-')[0].substring(1));
-                    if (!isNaN(weekNum) && weekNum > maxWeek) maxWeek = weekNum;
-                }
-            }
-            // atualiza o seletor se houver progresso maior que mostrado
-            if (maxWeek > 0) {
-                // não força navegação — apenas atualiza display do progresso
-                // se desejar, pode trocar de semana automaticamente
-            }
+    // DELETAR TAREFA
+    function deleteTask(weekNumber, taskIndex) {
+      plannerRef.get().then(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          const weeks = data.weeks;
+          const idx = weeks.findIndex(w => w.week === weekNumber);
+          weeks[idx].tasks.splice(taskIndex, 1);
+          plannerRef.set({ weeks });
         }
-
-        // Progresso global
-        function updateOverallProgress() {
-            const totalTasksAll = plannerData.reduce((acc, week) => acc + week.days.reduce((dAcc, d) => dAcc + d.tasks.length, 0), 0);
-            const doneAll = Object.values(completionStatus).filter(Boolean).length;
-            const pct = totalTasksAll > 0 ? Math.round((doneAll / totalTasksAll) * 100) : 0;
-            overallProgressBar.style.width = `${pct}%`;
-            overallProgressText.textContent = `${pct}% completo`;
-        }
-
-        // Set inicial
-        document.body.style.backgroundColor = 'var(--bg-color)';
-
-        // Save automaticamente quando fechar aba/janela
-        window.addEventListener('beforeunload', (e) => {
-            // salva síncrono (tenta) — Firestore web não garante no beforeunload, mas tentamos
-            if (userId && dataLoaded) {
-                navigator.sendBeacon && navigator.sendBeacon('/'); // tentamos sinalizar
-                // também fazemos um save imediato (assíncrono)
-                saveDataToFirestore();
-            }
-        });
-    </script>
+      });
+    }
+  </script>
 </body>
 </html>
