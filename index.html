@@ -93,12 +93,31 @@
             background-position: right 0.5rem center;
             background-size: 1.5em 1.5em;
         }
+        .code-block {
+            background-color: rgba(0,0,0,0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 0.875rem;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
 
+    <!-- Overlay Screen for errors and loading -->
+    <div id="overlay-screen" class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-75 hidden">
+        <div class="neumorphic-out p-8 rounded-lg max-w-lg w-full mx-4 text-left">
+             <h3 id="overlay-title" class="text-2xl font-bold mb-4" style="color: var(--accent-color);">Aviso</h3>
+             <div id="overlay-content" class="text-sm" style="color: var(--text-color);"></div>
+        </div>
+    </div>
+
+
     <!-- Login Screen -->
-    <div id="login-screen" class="fixed inset-0 flex items-center justify-center z-50">
+    <div id="login-screen" class="fixed inset-0 flex items-center justify-center z-40">
         <div class="neumorphic-out p-8 rounded-lg max-w-md w-full mx-4 text-center">
             <h3 class="text-2xl font-bold mb-2" style="color: var(--accent-color);">Bem-vindo(a)</h3>
             <p class="mb-8" style="color: var(--text-color);">Aceda ao seu planner de estudos.</p>
@@ -106,10 +125,6 @@
                 <svg class="w-6 h-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691c-1.242 1.83-1.999 3.98-1.999 6.309s.757 4.479 1.999 6.309l-5.657 5.657C.653 30.738 0 27.498 0 24s.653-6.738 1.909-9.309l5.657 5.657z"/><path fill="#4CAF50" d="M24 48c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 40.636 26.714 42 24 42c-4.836 0-8.991-3.328-10.43-7.828l-6.313 5.395C9.728 44.594 16.324 48 24 48z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/></svg>
                 Entrar com Google
             </button>
-            <div id="login-error-container" class="mt-6 text-left hidden p-4 rounded-lg" style="background: var(--bg-color); box-shadow: inset 2px 2px 5px var(--dark-shadow), inset -2px -2px 5px var(--light-shadow);">
-                <p class="font-bold text-red-600">Erro de Configuração</p>
-                <div id="login-error-message" class="mt-2 text-sm" style="color: var(--text-color);"></div>
-            </div>
         </div>
     </div>
 
@@ -187,8 +202,9 @@
         const loginScreen = document.getElementById('login-screen');
         const googleLoginBtn = document.getElementById('google-login-btn');
         const welcomeMessage = document.getElementById('welcome-message');
-        const loginErrorContainer = document.getElementById('login-error-container');
-        const loginErrorMessage = document.getElementById('login-error-message');
+        const overlayScreen = document.getElementById('overlay-screen');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayContent = document.getElementById('overlay-content');
         
         const weekSelector = document.getElementById('week-selector');
         const plannerContent = document.getElementById('planner-content');
@@ -220,41 +236,42 @@
         db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
+        function showOverlay(title, content) {
+            overlayTitle.innerHTML = title;
+            overlayContent.innerHTML = content;
+            overlayScreen.classList.remove('hidden');
+        }
+
         googleLoginBtn.addEventListener('click', () => {
-            loginErrorContainer.classList.add('hidden');
             signInWithPopup(auth, provider).catch(error => {
                 console.error("Google sign-in error", error);
                 if (error.code === 'auth/unauthorized-domain') {
                     const currentDomain = window.location.hostname || 'o domínio atual';
-                    loginErrorMessage.innerHTML = `
+                    showOverlay('Erro de Configuração', `
                         <p class="mb-2">O domínio <strong>${currentDomain}</strong> não está autorizado.</p>
                         <p class="mb-2"><strong>Ação Necessária:</strong></p>
-                        <ol class="list-decimal list-inside space-y-1 text-xs">
+                        <ol class="list-decimal list-inside space-y-1">
                             <li>Aceda à <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" class="font-bold underline" style="color: var(--accent-color);">Consola do Firebase</a>.</li>
                             <li>Vá para <strong>Authentication > Settings > Domínios autorizados</strong>.</li>
-                            <li>Clique em <strong>"Adicionar domínio"</strong>.</li>
-                            <li>Adicione: <strong>${currentDomain}</strong></li>
+                            <li>Clique em <strong>"Adicionar domínio"</strong> e adicione: <strong>${currentDomain}</strong></li>
                             <li>Recarregue esta página e tente novamente.</li>
                         </ol>
-                    `;
-                    loginErrorContainer.classList.remove('hidden');
+                    `);
                 } else {
-                    loginErrorMessage.textContent = 'Ocorreu um erro inesperado ao tentar entrar. Por favor, tente novamente.';
-                    loginErrorContainer.classList.remove('hidden');
+                    showOverlay('Erro de Autenticação', 'Ocorreu um erro inesperado ao tentar entrar. Por favor, tente novamente.');
                 }
             });
         });
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in
                 userId = user.uid;
+                overlayScreen.classList.add('hidden');
                 loginScreen.classList.add('hidden');
                 mainContainer.classList.remove('hidden');
                 welcomeMessage.textContent = `Olá, ${user.displayName || 'Estudante'}! Acompanhe o seu progresso.`
                 loadProgressFromFirestore();
             } else {
-                // User is signed out
                 userId = null;
                 if(unsubscribe) unsubscribe();
                 mainContainer.classList.add('hidden');
@@ -272,6 +289,9 @@
                 }, { merge: true });
             } catch (e) {
                 console.error("Error writing document: ", e);
+                 if (e.code === 'permission-denied') {
+                    showSecurityRulesError();
+                }
             }
         }
         
@@ -290,13 +310,43 @@
                     console.log("No existing data for this user, initializing.");
                     completionStatus = {};
                     currentWeek = 1;
+                    // Save initial state for new user
+                    saveDataToFirestore();
                 }
                 initializeAppState();
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
-                alert("Não foi possível carregar os dados. Verifique a sua conexão e as regras de segurança do Firestore.");
+                if (error.code === 'permission-denied') {
+                    showSecurityRulesError();
+                } else {
+                    showOverlay('Erro de Conexão', 'Não foi possível carregar os dados. Verifique a sua conexão à internet.');
+                }
             });
         }
+
+        function showSecurityRulesError() {
+            showOverlay('Erro de Permissão na Base de Dados', `
+                <p class="mb-4">A sua conta está autenticada, mas as regras de segurança do Firestore estão a impedir a leitura ou escrita do seu progresso.</p>
+                <p class="mb-2"><strong>Ação Necessária:</strong></p>
+                <ol class="list-decimal list-inside space-y-2 mb-4">
+                    <li>Aceda à sua <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" class="font-bold underline" style="color: var(--accent-color);">Consola do Firebase</a>.</li>
+                    <li>Vá para <strong>Build > Firestore Database > Rules</strong>.</li>
+                    <li>Substitua o conteúdo existente por estas regras:</li>
+                </ol>
+                <div class="code-block">
+                    rules_version = '2';<br>
+                    service cloud.firestore {<br>
+                    &nbsp;&nbsp;match /databases/{database}/documents {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;match /artifacts/{appId}/users/{userId} {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;allow read, write: if request.auth != null && request.auth.uid == userId;<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                    &nbsp;&nbsp;}<br>
+                    }
+                </div>
+                 <p class="mt-4">Após guardar as novas regras, <strong>recarregue esta página</strong>.</p>
+            `);
+        }
+
         // --- FIM: LÓGICA DO FIREBASE ---
 
         function initializeAppState() {
@@ -313,7 +363,7 @@
                 option.value = week.week;
                 option.textContent = `${week.week}`;
                 weekSelector.appendChild(option);
-});
+            });
             weekSelector.value = currentWeek;
         }
 
