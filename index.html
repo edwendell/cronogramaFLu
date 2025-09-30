@@ -259,8 +259,8 @@
             if (user) {
                 userId = user.uid;
                 welcomeMessage.textContent = `Olá, ${user.displayName || 'Estudante'}! A carregar o seu progresso...`;
-                await initializeUserData(); // Ensure data is ready before proceeding
-                setupRealtimeListener(); // Now, setup the listener
+                await initializeUserData();
+                setupRealtimeListener();
             } else {
                 userId = null;
                 if (unsubscribe) unsubscribe();
@@ -272,6 +272,7 @@
         });
 
         async function initializeUserData() {
+            if (!userId) return;
             const docRef = doc(db, "artifacts", appId, "users", userId);
             try {
                 const docSnap = await getDoc(docRef);
@@ -289,11 +290,12 @@
                 } else {
                     showOverlay('Erro de Conexão', 'Não foi possível verificar os dados iniciais. Verifique a sua conexão à internet.');
                 }
+                throw error; // Propagate error to stop execution if init fails
             }
         }
         
         async function saveDataToFirestore() {
-            if (!userId || !dataLoaded) return; // Don't save if data isn't fully loaded
+            if (!userId || !dataLoaded) return; 
             const docRef = doc(db, "artifacts", appId, "users", userId);
             try {
                 await setDoc(docRef, { 
@@ -315,17 +317,27 @@
             if (unsubscribe) unsubscribe();
 
             unsubscribe = onSnapshot(docRef, (docSnap) => {
-                dataLoaded = true; // Mark data as loaded
-                overlayScreen.classList.add('hidden');
-                loginScreen.classList.add('hidden');
-                mainContainer.classList.remove('hidden');
-
+                
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     completionStatus = data.completionStatus || {};
                     currentWeek = data.currentWeek || 1;
-                    initializeAppState();
+                    
+                    if (!dataLoaded) {
+                        dataLoaded = true;
+                        initializeAppState();
+                    } else {
+                        // Data is already loaded, just re-render to reflect changes
+                        renderWeek(currentWeek);
+                        updateOverallProgress();
+                        calculateAndUpdateRealCurrentWeek();
+                    }
                 }
+                
+                overlayScreen.classList.add('hidden');
+                loginScreen.classList.add('hidden');
+                mainContainer.classList.remove('hidden');
+
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
                 if (error.code === 'permission-denied') {
