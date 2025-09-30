@@ -259,8 +259,13 @@
             if (user) {
                 userId = user.uid;
                 welcomeMessage.textContent = `Olá, ${user.displayName || 'Estudante'}! A carregar o seu progresso...`;
-                await initializeUserData();
-                setupRealtimeListener();
+                try {
+                    await initializeUserData();
+                    setupRealtimeListener();
+                } catch (error) {
+                    // Errors from initializeUserData are already handled by showing an overlay
+                    console.error("Initialization failed, stopping.", error);
+                }
             } else {
                 userId = null;
                 if (unsubscribe) unsubscribe();
@@ -285,12 +290,10 @@
                 }
             } catch (error) {
                  console.error("Error initializing user data:", error);
-                if (error.code === 'permission-denied') {
-                    showSecurityRulesError();
-                } else {
-                    showOverlay('Erro de Conexão', 'Não foi possível verificar os dados iniciais. Verifique a sua conexão à internet.');
-                }
-                throw error; // Propagate error to stop execution if init fails
+                 // This is the most likely failure point for the user's reported error.
+                 // We will assume it's a security rules issue and guide them.
+                 showSecurityRulesError();
+                 throw error; // Propagate error to stop execution
             }
         }
         
@@ -323,11 +326,12 @@
                     completionStatus = data.completionStatus || {};
                     currentWeek = data.currentWeek || 1;
                     
+                    // Only render the full app once we are sure data is loaded
                     if (!dataLoaded) {
-                        dataLoaded = true;
-                        initializeAppState();
+                        dataLoaded = true; // Set the flag
+                        initializeAppState(); // Render for the first time
                     } else {
-                        // Data is already loaded, just re-render to reflect changes
+                        // For subsequent updates, just refresh the view
                         renderWeek(currentWeek);
                         updateOverallProgress();
                         calculateAndUpdateRealCurrentWeek();
@@ -340,11 +344,8 @@
 
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
-                if (error.code === 'permission-denied') {
-                    showSecurityRulesError();
-                } else {
-                    showOverlay('Erro de Conexão', 'Não foi possível carregar as atualizações em tempo real. Verifique a sua conexão à internet.');
-                }
+                // If the listener itself fails, it's almost certainly a rules issue.
+                showSecurityRulesError();
             });
         }
 
