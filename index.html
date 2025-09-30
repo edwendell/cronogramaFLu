@@ -183,7 +183,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- INÍCIO: DADOS DO PLANNER ---
         const linkIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="link-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 001.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" /><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" /></svg>`;
@@ -217,6 +217,7 @@
         let userId = null;
         let db;
         let unsubscribe; // To detach the Firestore listener
+        let dataLoaded = false; // Flag to prevent premature rendering
 
         // --- INÍCIO: LÓGICA DO FIREBASE ---
 
@@ -254,22 +255,45 @@
             });
         });
 
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
                 userId = user.uid;
-                welcomeMessage.textContent = `Olá, ${user.displayName || 'Estudante'}! A carregar o seu progresso...`
-                loadProgressFromFirestore();
+                welcomeMessage.textContent = `Olá, ${user.displayName || 'Estudante'}! A carregar o seu progresso...`;
+                await initializeUserData(); // Ensure data is ready before proceeding
+                setupRealtimeListener(); // Now, setup the listener
             } else {
                 userId = null;
-                if(unsubscribe) unsubscribe();
+                if (unsubscribe) unsubscribe();
+                dataLoaded = false;
                 mainContainer.classList.add('hidden');
                 loginScreen.classList.remove('hidden');
                 overlayScreen.classList.add('hidden');
             }
         });
+
+        async function initializeUserData() {
+            const docRef = doc(db, "artifacts", appId, "users", userId);
+            try {
+                const docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) {
+                    console.log("No existing data for this user, creating initial document.");
+                    await setDoc(docRef, {
+                        completionStatus: {},
+                        currentWeek: 1
+                    });
+                }
+            } catch (error) {
+                 console.error("Error initializing user data:", error);
+                if (error.code === 'permission-denied') {
+                    showSecurityRulesError();
+                } else {
+                    showOverlay('Erro de Conexão', 'Não foi possível verificar os dados iniciais. Verifique a sua conexão à internet.');
+                }
+            }
+        }
         
         async function saveDataToFirestore() {
-            if (!userId) return;
+            if (!userId || !dataLoaded) return; // Don't save if data isn't fully loaded
             const docRef = doc(db, "artifacts", appId, "users", userId);
             try {
                 await setDoc(docRef, { 
@@ -284,15 +308,14 @@
             }
         }
         
-        function loadProgressFromFirestore() {
+        function setupRealtimeListener() {
             if (!userId) return;
             const docRef = doc(db, "artifacts", appId, "users", userId);
             
             if (unsubscribe) unsubscribe();
 
             unsubscribe = onSnapshot(docRef, (docSnap) => {
-                // This is the core logic fix:
-                // Only render the app AFTER we have a definitive state from Firestore.
+                dataLoaded = true; // Mark data as loaded
                 overlayScreen.classList.add('hidden');
                 loginScreen.classList.add('hidden');
                 mainContainer.classList.remove('hidden');
@@ -301,21 +324,14 @@
                     const data = docSnap.data();
                     completionStatus = data.completionStatus || {};
                     currentWeek = data.currentWeek || 1;
-                } else {
-                    console.log("No existing data for this user, creating initial document.");
-                    completionStatus = {};
-                    currentWeek = 1;
-                    // Create the initial document. The listener will be re-triggered with the new data.
-                    saveDataToFirestore(); 
+                    initializeAppState();
                 }
-                initializeAppState();
-
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
                 if (error.code === 'permission-denied') {
                     showSecurityRulesError();
                 } else {
-                    showOverlay('Erro de Conexão', 'Não foi possível carregar os dados. Verifique a sua conexão à internet.');
+                    showOverlay('Erro de Conexão', 'Não foi possível carregar as atualizações em tempo real. Verifique a sua conexão à internet.');
                 }
             });
         }
