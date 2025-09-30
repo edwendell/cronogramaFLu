@@ -1,143 +1,171 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Meu Planner Semanal</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 2rem;
-      background: #f2f2f2;
-    }
-    h1 {
-      text-align: center;
-    }
-    .day {
-      background: #fff;
-      margin-bottom: 1rem;
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    .day h2 {
-      margin: 0;
-    }
-    textarea {
-      width: 100%;
-      height: 80px;
-      margin-top: 0.5rem;
-      resize: vertical;
-    }
-    #status {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background: #fffae6;
-      padding: 0.5rem 1rem;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Planner de Estudos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
 </head>
-<body>
-  <h1>Planner Semanal</h1>
-  <div id="status">Conectando...</div>
-  <div id="planner"></div>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-start p-4">
+  <h1 class="text-2xl font-bold mb-4">📅 Planner de Estudos</h1>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+  <!-- Área de login -->
+  <div id="loginArea" class="text-center">
+    <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Entrar com Google</button>
+  </div>
+
+  <!-- Área do planner -->
+  <div id="plannerArea" class="hidden w-full max-w-3xl">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold">Suas Tarefas</h2>
+      <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">Sair</button>
+    </div>
+
+    <!-- Lista de tarefas -->
+    <ul id="taskList" class="space-y-2"></ul>
+
+    <!-- Formulário para adicionar -->
+    <div class="mt-4 flex">
+      <input id="newTaskInput" type="text" placeholder="Nova tarefa..." 
+             class="flex-grow border rounded px-2 py-1"/>
+      <button id="addTaskBtn" 
+              class="ml-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">+</button>
+    </div>
+  </div>
 
   <script>
-    // 🔧 Substitua com sua configuração do Firebase:
+    // CONFIGURAÇÃO FIREBASE
     const firebaseConfig = {
-      apiKey: "SUA_API_KEY",
-      authDomain: "SEU_DOMINIO.firebaseapp.com",
-      projectId: "SEU_PROJECT_ID",
-      storageBucket: "SEU_BUCKET.appspot.com",
-      messagingSenderId: "SEU_SENDER_ID",
-      appId: "SUA_APP_ID"
-    };
+  apiKey: "AIzaSyDtkw14S6v60cbjPKuqtzzQoCJRlzlR6w4",
+  authDomain: "planner-de-estudos-ec7c4.firebaseapp.com",
+  projectId: "planner-de-estudos-ec7c4",
+  storageBucket: "planner-de-estudos-ec7c4.firebasestorage.app",
+  messagingSenderId: "809041087779",
+  appId: "1:809041087779:web:66819ca4f44a90f26a5096"
+};
 
-    const app = firebase.initializeApp(firebaseConfig);
+    // Inicializa Firebase
+    firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    const days = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
-    const plannerEl = document.getElementById('planner');
-    const statusEl = document.getElementById('status');
+    const loginArea = document.getElementById('loginArea');
+    const loginBtn = document.getElementById('loginBtn');
+    const plannerArea = document.getElementById('plannerArea');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const taskList = document.getElementById('taskList');
+    const newTaskInput = document.getElementById('newTaskInput');
+    const addTaskBtn = document.getElementById('addTaskBtn');
 
-    let userId = null;
+    let plannerRef = null;
+    let unsubscribe = null;
 
-    // Cria UI
-    function createUI(data = {}) {
-      plannerEl.innerHTML = "";
-      days.forEach((day, index) => {
-        const content = data[day] || "";
-        const div = document.createElement('div');
-        div.className = 'day';
-
-        const h2 = document.createElement('h2');
-        h2.textContent = day;
-
-        const textarea = document.createElement('textarea');
-        textarea.value = content;
-        textarea.addEventListener('input', () => {
-          saveDayData(day, textarea.value);
-        });
-
-        div.appendChild(h2);
-        div.appendChild(textarea);
-        plannerEl.appendChild(div);
+    // LOGIN
+    loginBtn.addEventListener('click', () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(err => {
+        alert('Erro ao autenticar: ' + err.message);
+        console.error(err);
       });
-    }
+    });
 
-    // Salva no Firestore
-    function saveDayData(day, value) {
-      if (!userId) return;
-      const docRef = db.collection("planners").doc(userId);
-      docRef.set({ [day]: value }, { merge: true })
-        .then(() => {
-          statusEl.textContent = `Salvo: ${day}`;
-        })
-        .catch(err => {
-          console.error("Erro ao salvar:", err);
-          statusEl.textContent = "Erro ao salvar (permissão?)";
-        });
-    }
+    // LOGOUT
+    logoutBtn.addEventListener('click', () => {
+      if (unsubscribe) unsubscribe();
+      auth.signOut();
+    });
 
-    // Observa alterações em tempo real
-    function setupRealtimeListener() {
-      const docRef = db.collection("planners").doc(userId);
-      docRef.onSnapshot(doc => {
-        if (doc.exists) {
-          createUI(doc.data());
-          statusEl.textContent = "Planner carregado.";
-        } else {
-          createUI();
-          statusEl.textContent = "Novo planner criado.";
-        }
-      }, err => {
-        console.error("Erro ao escutar:", err);
-        statusEl.textContent = "Erro de permissão ao carregar planner.";
-      });
-    }
-
-    // Autenticação anônima
+    // Monitora autenticação
     auth.onAuthStateChanged(user => {
       if (user) {
-        userId = user.uid;
-        statusEl.textContent = "Usuário autenticado.";
-        setupRealtimeListener();
+        loginArea.classList.add('hidden');
+        plannerArea.classList.remove('hidden');
+        startPlanner(user.uid);
       } else {
-        auth.signInAnonymously()
-          .catch(err => {
-            console.error("Erro ao autenticar:", err);
-            statusEl.textContent = "Erro na autenticação.";
-          });
+        plannerArea.classList.add('hidden');
+        loginArea.classList.remove('hidden');
       }
     });
+
+    // Inicia planner do usuário
+    function startPlanner(uid) {
+      plannerRef = db.collection('planners').doc(uid);
+
+      unsubscribe = plannerRef.onSnapshot(doc => {
+        if (doc.exists) {
+          renderTasks(doc.data().tasks || []);
+        } else {
+          plannerRef.set({ tasks: [] });
+        }
+      });
+    }
+
+    // Renderiza lista
+    function renderTasks(tasks) {
+      taskList.innerHTML = '';
+      tasks.forEach((t, i) => {
+        const li = document.createElement('li');
+        li.className = "flex justify-between items-center bg-white shadow rounded p-2";
+
+        const span = document.createElement('span');
+        span.textContent = t.text;
+        if (t.done) span.classList.add('line-through', 'text-gray-500');
+
+        const btns = document.createElement('div');
+
+        const doneBtn = document.createElement('button');
+        doneBtn.textContent = t.done ? '↩️' : '✅';
+        doneBtn.className = "mr-2";
+        doneBtn.onclick = () => toggleTask(i, !t.done);
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '🗑️';
+        delBtn.onclick = () => deleteTask(i);
+
+        btns.appendChild(doneBtn);
+        btns.appendChild(delBtn);
+
+        li.appendChild(span);
+        li.appendChild(btns);
+        taskList.appendChild(li);
+      });
+    }
+
+    // Adiciona tarefa
+    addTaskBtn.addEventListener('click', () => {
+      const text = newTaskInput.value.trim();
+      if (!text) return;
+      plannerRef.update({
+        tasks: firebase.firestore.FieldValue.arrayUnion({ text, done: false })
+      });
+      newTaskInput.value = '';
+    });
+
+    // Alterna status
+    function toggleTask(index, done) {
+      plannerRef.get().then(doc => {
+        if (doc.exists) {
+          const tasks = doc.data().tasks || [];
+          tasks[index].done = done;
+          plannerRef.set({ tasks });
+        }
+      });
+    }
+
+    // Remove tarefa
+    function deleteTask(index) {
+      plannerRef.get().then(doc => {
+        if (doc.exists) {
+          const tasks = doc.data().tasks || [];
+          tasks.splice(index, 1);
+          plannerRef.set({ tasks });
+        }
+      });
+    }
   </script>
 </body>
 </html>
