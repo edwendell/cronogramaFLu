@@ -221,8 +221,6 @@
 
         // --- INÍCIO: LÓGICA DO FIREBASE ---
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'cronograma-flu-standalone';
-
         const firebaseConfig = {
             apiKey: "AIzaSyDtkw14S6v60cbjPKuqtzzQoCJRlzlR6w4",
             authDomain: "planner-de-estudos-ec7c4.firebaseapp.com",
@@ -263,7 +261,7 @@
                     await initializeUserData();
                     setupRealtimeListener();
                 } catch (error) {
-                    // Errors from initializeUserData are already handled by showing an overlay
+                    // Error is already handled by showing an overlay in initializeUserData
                     console.error("Initialization failed, stopping.", error);
                 }
             } else {
@@ -278,7 +276,7 @@
 
         async function initializeUserData() {
             if (!userId) return;
-            const docRef = doc(db, "artifacts", appId, "users", userId);
+            const docRef = doc(db, "planners", userId); // CORRECTED PATH
             try {
                 const docSnap = await getDoc(docRef);
                 if (!docSnap.exists()) {
@@ -290,8 +288,6 @@
                 }
             } catch (error) {
                  console.error("Error initializing user data:", error);
-                 // This is the most likely failure point for the user's reported error.
-                 // We will assume it's a security rules issue and guide them.
                  showSecurityRulesError();
                  throw error; // Propagate error to stop execution
             }
@@ -299,7 +295,7 @@
         
         async function saveDataToFirestore() {
             if (!userId || !dataLoaded) return; 
-            const docRef = doc(db, "artifacts", appId, "users", userId);
+            const docRef = doc(db, "planners", userId); // CORRECTED PATH
             try {
                 await setDoc(docRef, { 
                     completionStatus: completionStatus,
@@ -315,7 +311,7 @@
         
         function setupRealtimeListener() {
             if (!userId) return;
-            const docRef = doc(db, "artifacts", appId, "users", userId);
+            const docRef = doc(db, "planners", userId); // CORRECTED PATH
             
             if (unsubscribe) unsubscribe();
 
@@ -326,12 +322,10 @@
                     completionStatus = data.completionStatus || {};
                     currentWeek = data.currentWeek || 1;
                     
-                    // Only render the full app once we are sure data is loaded
                     if (!dataLoaded) {
-                        dataLoaded = true; // Set the flag
-                        initializeAppState(); // Render for the first time
+                        dataLoaded = true;
+                        initializeAppState();
                     } else {
-                        // For subsequent updates, just refresh the view
                         renderWeek(currentWeek);
                         updateOverallProgress();
                         calculateAndUpdateRealCurrentWeek();
@@ -344,7 +338,6 @@
 
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
-                // If the listener itself fails, it's almost certainly a rules issue.
                 showSecurityRulesError();
             });
         }
@@ -362,7 +355,7 @@
                     rules_version = '2';<br>
                     service cloud.firestore {<br>
                     &nbsp;&nbsp;match /databases/{database}/documents {<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;match /artifacts/{appId}/users/{userId} {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;match /planners/{userId} {<br>
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;allow read, write: if request.auth != null && request.auth.uid == userId;<br>
                     &nbsp;&nbsp;&nbsp;&nbsp;}<br>
                     &nbsp;&nbsp;}<br>
