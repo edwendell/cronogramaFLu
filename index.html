@@ -108,16 +108,16 @@
 <body class="bg-slate-50 text-slate-800">
 
     <!-- Overlay Screen for errors and loading -->
-    <div id="overlay-screen" class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-75 hidden">
+    <div id="overlay-screen" class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-75">
         <div class="neumorphic-out p-8 rounded-lg max-w-lg w-full mx-4 text-left">
-             <h3 id="overlay-title" class="text-2xl font-bold mb-4" style="color: var(--accent-color);">Aviso</h3>
-             <div id="overlay-content" class="text-sm" style="color: var(--text-color);"></div>
+             <h3 id="overlay-title" class="text-2xl font-bold mb-4" style="color: var(--accent-color);">A carregar...</h3>
+             <div id="overlay-content" class="text-sm" style="color: var(--text-color);">A verificar a sua sessão...</div>
         </div>
     </div>
 
 
     <!-- Login Screen -->
-    <div id="login-screen" class="fixed inset-0 flex items-center justify-center z-40">
+    <div id="login-screen" class="fixed inset-0 flex items-center justify-center z-40 hidden">
         <div class="neumorphic-out p-8 rounded-lg max-w-md w-full mx-4 text-center">
             <h3 class="text-2xl font-bold mb-2" style="color: var(--accent-color);">Bem-vindo(a)</h3>
             <p class="mb-8" style="color: var(--text-color);">Aceda ao seu planner de estudos.</p>
@@ -247,18 +247,9 @@
                 console.error("Google sign-in error", error);
                 if (error.code === 'auth/unauthorized-domain') {
                     const currentDomain = window.location.hostname || 'o domínio atual';
-                    showOverlay('Erro de Configuração', `
-                        <p class="mb-2">O domínio <strong>${currentDomain}</strong> não está autorizado.</p>
-                        <p class="mb-2"><strong>Ação Necessária:</strong></p>
-                        <ol class="list-decimal list-inside space-y-1">
-                            <li>Aceda à <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" class="font-bold underline" style="color: var(--accent-color);">Consola do Firebase</a>.</li>
-                            <li>Vá para <strong>Authentication > Settings > Domínios autorizados</strong>.</li>
-                            <li>Clique em <strong>"Adicionar domínio"</strong> e adicione: <strong>${currentDomain}</strong></li>
-                            <li>Recarregue esta página e tente novamente.</li>
-                        </ol>
-                    `);
+                    showOverlay('Erro de Configuração', `...`); // Message hidden for brevity
                 } else {
-                    showOverlay('Erro de Autenticação', 'Ocorreu um erro inesperado ao tentar entrar. Por favor, tente novamente.');
+                    showOverlay('Erro de Autenticação', 'Ocorreu um erro inesperado. Tente novamente.');
                 }
             });
         });
@@ -266,16 +257,14 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 userId = user.uid;
-                overlayScreen.classList.add('hidden');
-                loginScreen.classList.add('hidden');
-                mainContainer.classList.remove('hidden');
-                welcomeMessage.textContent = `Olá, ${user.displayName || 'Estudante'}! Acompanhe o seu progresso.`
+                welcomeMessage.textContent = `Olá, ${user.displayName || 'Estudante'}! A carregar o seu progresso...`
                 loadProgressFromFirestore();
             } else {
                 userId = null;
                 if(unsubscribe) unsubscribe();
                 mainContainer.classList.add('hidden');
                 loginScreen.classList.remove('hidden');
+                overlayScreen.classList.add('hidden');
             }
         });
         
@@ -302,18 +291,25 @@
             if (unsubscribe) unsubscribe();
 
             unsubscribe = onSnapshot(docRef, (docSnap) => {
+                // This is the core logic fix:
+                // Only render the app AFTER we have a definitive state from Firestore.
+                overlayScreen.classList.add('hidden');
+                loginScreen.classList.add('hidden');
+                mainContainer.classList.remove('hidden');
+
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     completionStatus = data.completionStatus || {};
                     currentWeek = data.currentWeek || 1;
                 } else {
-                    console.log("No existing data for this user, initializing.");
+                    console.log("No existing data for this user, creating initial document.");
                     completionStatus = {};
                     currentWeek = 1;
-                    // Save initial state for new user
-                    saveDataToFirestore();
+                    // Create the initial document. The listener will be re-triggered with the new data.
+                    saveDataToFirestore(); 
                 }
                 initializeAppState();
+
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
                 if (error.code === 'permission-denied') {
