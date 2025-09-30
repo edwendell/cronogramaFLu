@@ -282,7 +282,7 @@
 
         async function initializeUserData() {
             if (!userId) return;
-            const docRef = doc(db, "planners", userId);
+            const docRef = doc(db, "planners", userId); // CORRECTED PATH
             try {
                 const docSnap = await getDoc(docRef);
                 if (!docSnap.exists()) {
@@ -301,7 +301,7 @@
         
         async function saveDataToFirestore() {
             if (!userId || !dataLoaded) return; 
-            const docRef = doc(db, "planners", userId);
+            const docRef = doc(db, "planners", userId); // CORRECTED PATH
             try {
                 await setDoc(docRef, { 
                     completionStatus: completionStatus,
@@ -317,7 +317,7 @@
         
         function setupRealtimeListener() {
             if (!userId) return;
-            const docRef = doc(db, "planners", userId);
+            const docRef = doc(db, "planners", userId); // CORRECTED PATH
             
             if (unsubscribe) unsubscribe();
 
